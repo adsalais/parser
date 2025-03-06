@@ -1,0 +1,19 @@
+<clickhouse>
+    <mark_cache_size>1073741824</mark_cache_size>
+    <compression>
+        <case>
+            <!-- Conditions. All must be satisfied. Some conditions may be omitted. -->
+            <min_part_size>10000000000</min_part_size>        <!-- Min part size in bytes. -->
+            <min_part_size_ratio>0.01</min_part_size_ratio>   <!-- Min size of part relative to whole table size. -->
+            <!-- What compression method to use. -->
+            <method>zstd</method>
+        </case>
+    </compression>
+    
+    <merge_tree>
+        <merge_max_block_size>1024</merge_max_block_size>
+        <max_bytes_to_merge_at_max_space_in_pool>1073741824</max_bytes_to_merge_at_max_space_in_pool>
+        <number_of_free_entries_in_pool_to_lower_max_size_of_merge>0</number_of_free_entries_in_pool_to_lower_max_size_of_merge>
+    </merge_tree> 
+
+</clickhouse>

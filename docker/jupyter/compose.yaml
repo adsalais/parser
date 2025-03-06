@@ -1,0 +1,12 @@
+services:
+  jupyter-test:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: jupyter_test
+    volumes:
+      - ./work:/home/jovyan/work
+    network_mode: host
+    ports:
+      - 8888:8888
+    command: "start-notebook.sh --NotebookApp.token="

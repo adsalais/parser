@@ -1,0 +1,15 @@
+/target
+/data/integration
+/data/temp
+/data/test/temp
+/temp
+/bin
+/logs
+/docker/clickhouse/user.d/default-user.xml
+/docker/clickhouse/log
+/jupyter/notebooks/.ipynb_checkpoints
+/*.yml
+/*.yaml
+/*.html
+/commands.txt
+/sql_sample.sql
