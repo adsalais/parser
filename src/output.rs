@@ -32,11 +32,6 @@ pub trait OutputWriter {
     /// called at the end of a parsing to ensure that the last data is writen or sent
     ///
     fn flush(&mut self) -> Result<(), Error>;
-
-    ///
-    /// returns the number of row that have been written to this output
-    ///
-    fn num_rows(&self) -> usize;
 }
 
 ///
@@ -44,6 +39,7 @@ pub trait OutputWriter {
 ///
 pub struct Output {
     pub list: Vec<Box<dyn OutputWriter>>,
+    pub num_rows: usize,
 }
 impl Output {
     pub fn new(
@@ -56,7 +52,7 @@ impl Output {
         for o in output_config {
             list.push(o.build(archive_name, context, topic)?);
         }
-        Ok(Self { list })
+        Ok(Self { list, num_rows: 0 })
     }
 
     ///
@@ -72,6 +68,7 @@ impl Output {
                 writer.write(data.clone())?;
             }
         }
+        self.num_rows += 1;
         Ok(())
     }
 
@@ -98,11 +95,7 @@ impl Output {
     /// returns the number of rows written to one writer
     ///
     pub fn num_rows(&self) -> usize {
-        if self.list.is_empty() {
-            0
-        } else {
-            self.list[0].num_rows()
-        }
+        self.num_rows
     }
 }
 impl Drop for Output {

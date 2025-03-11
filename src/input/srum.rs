@@ -90,7 +90,7 @@ impl SrumParser {
 
             if let Err(e) = self.parse_table(&srum_table.name, &mut output, fields) {
                 warn!(
-                    "srum table '{}' in {}/{} error: {e}",
+                    "Srum Table:'{}', Input:'{}/{}', Error: {e}",
                     &srum_table.topic, &fields.archive_name, &fields.archive_file
                 );
             }
@@ -294,7 +294,7 @@ mod tests {
 
     use crate::{
         input::srum_model::{APPLICATION_RESOURCES, NETWORK_CONNECTIVITY_USAGE},
-        writer::file_writer::TestWriter,
+        writer::file_writer::MemoryWriter,
     };
 
     use super::*;
@@ -348,10 +348,11 @@ mod tests {
         //
         // test network connectivity
         //
-        let output = TestWriter::new(1);
+        let output = MemoryWriter::new(1);
         let buffer = output.get_buffer();
         let mut output = Output {
             list: vec![Box::new(output)],
+            num_rows: 0,
         };
 
         //let t = NETWORK_CONNECTIVITY_USAGE_TOPIC;
@@ -381,10 +382,11 @@ mod tests {
         //
         // test network data usage
         //
-        let output = TestWriter::new(1);
+        let output = MemoryWriter::new(1);
         let buffer = output.get_buffer();
         let mut output = Output {
             list: vec![Box::new(output)],
+            num_rows: 0,
         };
 
         let now = Instant::now();

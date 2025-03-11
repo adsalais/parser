@@ -33,7 +33,6 @@ pub struct KafkaWriter {
     producer: ThreadedProducer<InputDeliveryCallback>,
     topic: String,
     has_error: Arc<AtomicBool>,
-    num_rows: usize,
 }
 impl KafkaWriter {
     pub fn new(topic: &str, params: &HashMap<String, String>) -> Result<KafkaWriter, Error> {
@@ -63,7 +62,6 @@ impl KafkaWriter {
             producer,
             topic: topic.to_owned(),
             has_error,
-            num_rows: 0,
         })
     }
 }
@@ -87,7 +85,7 @@ impl OutputWriter for KafkaWriter {
                 Ok(_) => break,
             }
         }
-        self.num_rows += 1;
+
         Ok(())
     }
 
@@ -95,10 +93,6 @@ impl OutputWriter for KafkaWriter {
         const FLUSH_TIMEOUT: u64 = 30;
         self.producer.flush(Duration::from_secs(FLUSH_TIMEOUT))?;
         Ok(())
-    }
-
-    fn num_rows(&self) -> usize {
-        self.num_rows
     }
 }
 
@@ -125,7 +119,7 @@ impl ProducerContext for InputDeliveryCallback {
             // It is ok to do so because the writer will stop after one error
             if !self.has_error.load(Ordering::Relaxed) {
                 self.has_error.store(true, Ordering::Relaxed);
-                error!("Delivery error {e}");
+                error!("Delivery error: {e}");
             }
         }
     }
@@ -157,8 +151,8 @@ pub async fn create_topics(
         Ok(results) => {
             for res in results {
                 match res {
-                    Ok(topic) => info!("topic '{topic}' created"),
-                    Err((topic, e)) => error!("topic '{topic}' creation failed: {e}"),
+                    Ok(topic) => info!("Topic: '{topic}' created"),
+                    Err((topic, e)) => error!("Topic: '{topic}' creation failed: {e}"),
                 }
             }
         }
@@ -183,8 +177,8 @@ pub async fn delete_topics(topic_names: Vec<String>, client: &AdminClient<Defaul
         Ok(results) => {
             for res in results {
                 match res {
-                    Ok(topic) => info!("topic '{topic}' deleted"),
-                    Err((topic, e)) => error!("topic '{topic}' delete failed: {e}"),
+                    Ok(topic) => info!("Topic: '{topic}' deleted"),
+                    Err((topic, e)) => error!("Topic: '{topic}' deletion failed: {e}"),
                 }
             }
         }

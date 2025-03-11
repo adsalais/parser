@@ -13,7 +13,7 @@ use log::{error, info, warn};
 use crate::{
     Error,
     configuration::{Configuration, ParserConfig, ParserType},
-    input::{evtx::parse_evtx, hive::parse_hive, srum::SrumParser},
+    input::{csv::parse_csv, evtx::parse_evtx, hive::parse_hive, srum::SrumParser},
     output::{Fields, OutputConfig},
 };
 
@@ -385,7 +385,23 @@ fn parse_file(
 ) -> Result<FileResultMsg, Error> {
     let instant = Instant::now();
     let num_rows = match &parse_msg.config {
-        ParserType::csv { config_file: _ } => 0,
+        ParserType::csv {
+            mapping_file,
+            best_effort,
+            skip_lines,
+        } => {
+            let best_effort = best_effort.unwrap_or(false);
+            let skip_lines = skip_lines.unwrap_or(0);
+            parse_csv(
+                &parse_msg.file,
+                client_context,
+                &parse_msg.fields,
+                output_config,
+                &mapping_file,
+                best_effort,
+                skip_lines,
+            )?
+        }
         ParserType::evtx => parse_evtx(
             &parse_msg.file,
             client_context,

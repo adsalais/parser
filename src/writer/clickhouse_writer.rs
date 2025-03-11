@@ -26,7 +26,6 @@ pub enum Message {
 pub struct ClickhouseWriter {
     _runtime: Runtime,
     sender: mpsc::Sender<Message>,
-    num_rows: usize,
     has_error: Arc<AtomicBool>,
     table: String,
 }
@@ -100,7 +99,6 @@ impl ClickhouseWriter {
         Ok(Self {
             _runtime: runtime,
             sender,
-            num_rows: 0,
             has_error,
             table: table.to_owned(),
         })
@@ -120,10 +118,9 @@ impl OutputWriter for ClickhouseWriter {
             self.sender
                 .blocking_send(Message::Row(row))
                 .map_err(|e| Error::Generic(e.to_string()))?;
-            self.num_rows += 1;
         } else {
             return Err(Error::Generic(format!(
-                "Some error occured while inserting data in table {}",
+                "An error occured while inserting data in table: {}",
                 self.table
             )));
         }
@@ -134,15 +131,11 @@ impl OutputWriter for ClickhouseWriter {
         let (tx, rx) = oneshot::channel::<Result<(), Error>>();
         self.sender.blocking_send(Message::Flush(tx)).map_err(|e| {
             Error::Generic(format!(
-                "Error while flushing data from table '{}', {e}",
+                "Error while flushing data from table: '{}', {e}",
                 self.table
             ))
         })?;
         rx.blocking_recv()?
-    }
-
-    fn num_rows(&self) -> usize {
-        self.num_rows
     }
 }
 

@@ -3,7 +3,6 @@
 ///
 pub struct FileWriter {
     writer: BufWriter<File>,
-    num_rows: usize,
 }
 impl FileWriter {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
@@ -16,10 +15,7 @@ impl FileWriter {
             .truncate(true)
             .open(path)?;
         let writer = BufWriter::with_capacity(FILE_BUFFER_OUTPUT_CAPACITY, outputfile);
-        Ok(Self {
-            writer,
-            num_rows: 0,
-        })
+        Ok(Self { writer })
     }
 }
 impl OutputWriter for FileWriter {
@@ -27,17 +23,12 @@ impl OutputWriter for FileWriter {
         let line = data.to_json_string()?;
         self.writer.write_all(line.as_bytes())?;
         self.writer.write_all("\n".as_bytes())?;
-        self.num_rows += 1;
         Ok(())
     }
 
     fn flush(&mut self) -> Result<(), Error> {
         self.writer.flush()?;
         Ok(())
-    }
-
-    fn num_rows(&self) -> usize {
-        self.num_rows
     }
 }
 
@@ -57,42 +48,32 @@ use crate::{
 /// Write a few lines in a vector
 ///
 #[cfg(test)]
-pub struct TestWriter {
+pub struct MemoryWriter {
     buffer: Rc<RefCell<Vec<String>>>,
     max_row: usize,
-    num_rows: usize,
 }
 #[cfg(test)]
-impl TestWriter {
+impl MemoryWriter {
     pub fn new(max_row: usize) -> Self {
         let buffer = Rc::new(RefCell::new(Vec::with_capacity(max_row)));
-        Self {
-            buffer,
-            max_row,
-            num_rows: 0,
-        }
+        Self { buffer, max_row }
     }
     pub fn get_buffer(&self) -> Rc<RefCell<Vec<String>>> {
         self.buffer.clone()
     }
 }
 #[cfg(test)]
-impl OutputWriter for TestWriter {
+impl OutputWriter for MemoryWriter {
     fn write(&mut self, value: Tuple) -> Result<(), Error> {
         let mut buff = self.buffer.borrow_mut();
         if buff.len() < self.max_row {
             let line = value.to_json_string()?;
             buff.push(line);
         }
-        self.num_rows += 1;
         Ok(())
     }
 
     fn flush(&mut self) -> Result<(), Error> {
         Ok(())
-    }
-
-    fn num_rows(&self) -> usize {
-        self.num_rows
     }
 }

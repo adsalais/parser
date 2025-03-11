@@ -8,6 +8,9 @@ pub enum Error {
     Clickhouse(#[from] clickhouse::error::Error),
 
     #[error(transparent)]
+    Csv(#[from] csv::Error),
+
+    #[error(transparent)]
     EvtxError(#[from] evtx::err::EvtxError),
 
     #[error(transparent)]
@@ -39,6 +42,15 @@ pub enum Error {
 
     #[error("Configuration file does not exist {0}")]
     Configuration(String),
+
+    #[error("CSV Configuration file does not exists: {0}")]
+    CsvConfiguration(String),
+
+    #[error("line{0}, column:{1} named:'{2}' is mandatory ")]
+    CsvMandatoryField(usize, usize, String),
+
+    #[error("line{0}, column: {1} named: '{2}' parsing error:{3} ")]
+    CsvParsing(usize, usize, String, String),
 
     #[error("data field already set")]
     DataField(),

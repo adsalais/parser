@@ -1,0 +1,75 @@
+topic: ntfs_info
+sort_field: FileNameLastModificationDate
+csv_delimiter: ','
+default_date_format: !Pattern
+- '%Y-%m-%d %H:%M:%S.%3f'
+- false
+
+#
+# field definition
+#
+fields:
+  ComputerName:
+    type: String
+    mandatory: true
+
+  VolumeID:
+    type: String
+    mandatory: true
+
+  File:
+    type: String
+    mandatory: true
+
+  ParentName:
+    type: String
+    mandatory: true
+
+  SizeInBytes:
+    type: Integer
+
+  CreationDate:
+    type: Date
+    mandatory: true
+
+  LastModificationDate:
+    type: Date
+
+  LastAccessDate:
+    type: Date
+
+  LastAttrChangeDate:
+    type: Date
+
+  FileNameCreationDate:
+    type: Date
+
+  FileNameLastModificationDate:
+    type: Date
+
+  FileNameLastAccessDate:
+    type: Date
+
+  FileNameLastAttrModificationDate:
+    type: Date
+
+  FilenameID:
+    type: Integer
+
+  DataID:
+    type: Integer
+
+  OwnerId:
+    type: Integer
+
+  FilenameFlags:
+    type: Integer
+
+  SecDescrID:
+    type: Integer
+
+  FilenameIndex:
+    type: Integer
+
+  DataIndex:
+    type: Integer

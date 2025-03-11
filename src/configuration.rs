@@ -6,6 +6,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error as Serde
 use crate::{
     Error,
     input::{
+        csv_mapping::CsvMapping,
         evtx::{EVTX_SORT_FIELD, EVTX_TABLE_NAME, evtx_fields},
         hive::{HIVE_SORT_FIELD, HIVE_TABLE_NAME, hive_fields},
         srum_model::{SRUM_SORT_FIELD, srum_tables},
@@ -74,7 +75,26 @@ impl Configuration {
         let mut is_parsed = HashSet::new();
         for conf in &self.parsers {
             match &conf.parser {
-                ParserType::csv { config_file: _ } => {}
+                ParserType::csv {
+                    mapping_file: config_file,
+                    best_effort: _,
+                    skip_lines: _,
+                } => {
+                    let mapping = CsvMapping::load(config_file)?;
+                    let name = &mapping.topic;
+                    if is_parsed.contains(name) {
+                        continue;
+                    }
+                    is_parsed.insert(name.to_owned());
+                    let topic_name = full_topic_name(&self.client_context, name);
+                    let partial_field_def = mapping.partial_fields();
+                    list.push(DataTopic::new(
+                        topic_name,
+                        name.to_owned(),
+                        partial_field_def,
+                        mapping.sort_field.unwrap_or("".to_owned()),
+                    ));
+                }
                 ParserType::evtx => {
                     if is_parsed.contains(EVTX_TABLE_NAME) {
                         continue;
@@ -178,9 +198,15 @@ pub enum DataType {
 //#[serde(tag = "type")]
 #[allow(non_camel_case_types)]
 pub enum ParserType {
-    csv { config_file: String },
+    csv {
+        mapping_file: String,
+        best_effort: Option<bool>,
+        skip_lines: Option<usize>,
+    },
     evtx,
-    hive { root_name: String },
+    hive {
+        root_name: String,
+    },
     srum,
 }
 
@@ -253,9 +279,10 @@ parsers:
   parser: srum
 - file_filter: test.*\.csv$
   parser: !csv
-    # csv column mapping requires an additional configuration file (see example/csv_config.yaml)
-    config_file: conf/test.yaml
-
+    # csv column mapping requires an additional configuration file (see data/ntfs_info.map.yaml)
+    mapping_file: conf/test.yaml
+    best_effort: true
+    skip_lines: 0
 # configure the output
 output:
 - type: file
@@ -307,7 +334,9 @@ mod tests {
         let csv_parser = ParserConfig {
             file_filter: Regex::new("test.*\\.dat$").unwrap(),
             parser: ParserType::csv {
-                config_file: "conf/test.yaml".to_string(),
+                mapping_file: "conf/test.yaml".to_string(),
+                best_effort: Some(true),
+                skip_lines: Some(0),
             },
         };
 

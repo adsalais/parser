@@ -41,8 +41,8 @@ pub fn parse_hive<P: AsRef<Path>>(
         HIVE_TABLE_NAME,
     )?;
 
-    let num_rows = parse(path, root_name, fields, &mut output)?;
-    Ok(num_rows)
+    parse(path, root_name, fields, &mut output)?;
+    Ok(output.num_rows())
 }
 
 fn parse<P: AsRef<Path>>(
@@ -50,29 +50,36 @@ fn parse<P: AsRef<Path>>(
     root_name: &str,
     fields: &Fields,
     output: &mut Output,
-) -> Result<usize, Error> {
-    let mut num_rows = 0;
-
-    let mut hive_file = File::open(path).unwrap();
+) -> Result<(), Error> {
+    let mut hive_file = File::open(path.as_ref()).unwrap();
     let mut data = Vec::with_capacity(hive_file.metadata().unwrap().len() as usize);
     hive_file.read_to_end(&mut data).unwrap();
 
     let hive = Hive::without_validation(data.as_ref())
-        .map_err(|e| format!("Error parsing hive file: {e}"))
+        .map_err(|e| {
+            format!(
+                "Error parsing hive file: '{}' - {e}",
+                path.as_ref().to_string_lossy()
+            )
+        })
         .unwrap();
 
     let root_key = hive
         .root_key_node()
-        .map_err(|e| format!("Error getting root key: {e}"))
+        .map_err(|e| {
+            format!(
+                "Error getting root key in file: '{}' - {e}",
+                path.as_ref().to_string_lossy()
+            )
+        })
         .unwrap();
 
-    parse_subkey(root_key, &mut num_rows, &root_name, fields, output)?;
-    Ok(num_rows)
+    parse_subkey(root_key, &root_name, fields, output)?;
+    Ok(())
 }
 
 fn parse_subkey<B>(
     key_node: KeyNode<B>,
-    num_rows: &mut usize,
     path: &str,
     fields: &Fields,
     output: &mut Output,
@@ -85,7 +92,6 @@ where
 
         for key_node in subkeys {
             let key_node = key_node?;
-            *num_rows += 1;
 
             let key_name = key_node.name()?.to_string_lossy();
 
@@ -142,11 +148,10 @@ where
                     let mut tuple = Tuple::new(fields);
                     tuple.set_data(serde_json::Value::Object(data), Some(timestamp))?;
                     output.write(tuple)?;
-                    *num_rows += 1;
                 }
             }
 
-            parse_subkey(key_node, num_rows, &path, fields, output)?;
+            parse_subkey(key_node, &path, fields, output)?;
         }
     }
 
@@ -234,16 +239,17 @@ fn from_filetime(timestamp: u64) -> DateTime<Utc> {
 mod tests {
     use std::time::Instant;
 
-    use crate::{init_log, writer::file_writer::TestWriter};
+    use crate::{init_log, writer::file_writer::MemoryWriter};
 
     use super::*;
     #[test]
     fn test_parse() {
         init_log();
-        let output = TestWriter::new(20);
+        let output = MemoryWriter::new(20);
         let buffer = output.get_buffer();
         let mut output = Output {
             list: vec![Box::new(output)],
+            num_rows: 0,
         };
 
         let fields = Fields::new(
@@ -253,8 +259,8 @@ mod tests {
             "kernel_pnp.evtx",
         );
         let now = Instant::now();
-        let num_rows = parse("data/parser/testhive", "kernel", &fields, &mut output).unwrap();
-        println!("Parse {num_rows} rows in {:.2?}", now.elapsed());
+        parse("data/parser/testhive", "kernel", &fields, &mut output).unwrap();
+        println!("Parse {} rows in {:.2?}", output.num_rows(), now.elapsed());
 
         let s = &buffer.borrow()[10];
 
@@ -273,10 +279,11 @@ mod tests {
     fn test_parse_error() {
         init_log();
 
-        let output = TestWriter::new(22);
+        let output = MemoryWriter::new(22);
         let buffer = output.get_buffer();
         let mut output = Output {
             list: vec![Box::new(output)],
+            num_rows: 0,
         };
 
         let fields = Fields::new(
@@ -286,8 +293,8 @@ mod tests {
             "kernel_pnp.evtx",
         );
         let now = Instant::now();
-        let num_rows = parse("data/parser/SAM.hive", "", &fields, &mut output).unwrap();
-        println!("Parse {num_rows} rows in {:.2?}", now.elapsed());
+        parse("data/parser/SAM.hive", "", &fields, &mut output).unwrap();
+        println!("Parse {} rows in {:.2?}", output.num_rows(), now.elapsed());
 
         let s = &buffer.borrow()[21];
 

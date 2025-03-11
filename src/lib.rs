@@ -71,6 +71,16 @@ mod tests {
             },
         };
 
+        let csv_filter = Regex::new("Info.csv$").unwrap();
+        let csv_config = ParserConfig {
+            file_filter: csv_filter,
+            parser: ParserType::csv {
+                mapping_file: "data/ntfs_info.map.yaml".to_owned(),
+                best_effort: Some(false),
+                skip_lines: Some(0),
+            },
+        };
+
         let clickhouse_config = OutputConfig::clickhouse {
             server: "localhost:8123".to_owned(),
             login: None,
@@ -80,13 +90,13 @@ mod tests {
         let context = "test_lib_end_to_end";
         let configuration = Configuration {
             client_context: context.to_owned(),
-            input_folder: "data/archive/".to_string(),
-            input_is_decompressed: false,
+            input_folder: "data/archive/decompressed".to_string(),
+            input_is_decompressed: true,
             temp_folder: "data/temp/".to_string(),
             archive_threads: 0,
             parsing_threads: 0,
             decompression_threads: 0,
-            parsers: vec![srum_config, evtx_config, hive_sam_config],
+            parsers: vec![srum_config, evtx_config, hive_sam_config, csv_config],
             output: vec![clickhouse_config],
         };
 
@@ -97,6 +107,13 @@ mod tests {
             .with_user("default")
             .with_url("http://localhost:8123")
             .with_option("enable_json_type", "1");
+
+        let database_query = format!("DROP DATABASE IF EXISTS {context} ;");
+        clickhouse_client
+            .query(&database_query)
+            .execute()
+            .await
+            .unwrap();
 
         let data_topics = configuration.list_topics().unwrap();
 

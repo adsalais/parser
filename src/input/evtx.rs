@@ -29,25 +29,23 @@ pub fn parse_evtx<P: AsRef<Path>>(
         EVTX_TABLE_NAME,
     )?;
 
-    let num_rows = parse(path, fields, &mut output)?;
-    Ok(num_rows)
+    parse(path, fields, &mut output)?;
+    Ok(output.num_rows())
 }
 
-fn parse<P: AsRef<Path>>(path: P, fields: &Fields, output: &mut Output) -> Result<usize, Error> {
+fn parse<P: AsRef<Path>>(path: P, fields: &Fields, output: &mut Output) -> Result<(), Error> {
     let settings = ParserSettings::new().separate_json_attributes(true);
     let parser = EvtxParser::from_path(path).unwrap();
     let mut parser = parser.with_configuration(settings);
 
-    let mut num_rows = 0;
     for record in parser.records_json_value() {
         let record = record?;
         let (event, sort_data) = format_event(record.data).unwrap();
         let mut tuple = Tuple::new(fields);
         tuple.set_data(event, Some(sort_data))?;
         output.write(tuple)?;
-        num_rows += 1;
     }
-    Ok(num_rows)
+    Ok(())
 }
 
 ///
@@ -143,7 +141,7 @@ mod tests {
 
     use std::time::Instant;
 
-    use crate::{init_log, writer::file_writer::TestWriter};
+    use crate::{init_log, writer::file_writer::MemoryWriter};
 
     use super::*;
     pub const EVTX_PATH: &str = "data/parser/kernel_pnp.evtx";
@@ -157,15 +155,16 @@ mod tests {
             "kernel_pnp.evtx",
         );
 
-        let output = TestWriter::new(1);
+        let output = MemoryWriter::new(1);
         let buffer = output.get_buffer();
         let mut output = Output {
             list: vec![Box::new(output)],
+            num_rows: 0,
         };
 
         let now = Instant::now();
-        let num = parse(EVTX_PATH, &fields, &mut output).unwrap();
-        println!("Parse {} rows in {:.2?}", num, now.elapsed());
+        parse(EVTX_PATH, &fields, &mut output).unwrap();
+        println!("Parse {} rows in {:.2?}", output.num_rows(), now.elapsed());
 
         let json: serde_json::Value = serde_json::from_str(&buffer.borrow()[0]).unwrap();
         let object = json.as_object().unwrap();
