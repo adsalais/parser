@@ -47,7 +47,7 @@ async fn run(args: CliArgs, password: &str) -> Result<(), Error> {
         &topics,
         &args.cluster,
         args.with_kafka,
-        &args.kafka_server,
+        &args.kafka_server.unwrap_or("set_me".to_owned()),
         args.kafka_consumers.unwrap_or(1),
     )
     .await?;
@@ -125,7 +125,7 @@ struct CliArgs {
     /// Kafka server. Example:localhost:9092
     /// requires --with-kafka
     #[arg(short, long, verbatim_doc_comment)]
-    kafka_server: String,
+    kafka_server: Option<String>,
 
     /// Number of kafka consumers
     /// requires --with-kafka
