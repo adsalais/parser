@@ -25,6 +25,7 @@ pub fn parse_evtx<P: AsRef<Path>>(
     let mut output = Output::new(
         output_config,
         &fields.archive_name,
+        &fields.archive_file,
         client_context,
         EVTX_TABLE_NAME,
     )?;

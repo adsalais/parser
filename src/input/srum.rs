@@ -84,6 +84,7 @@ impl SrumParser {
             let mut output = Output::new(
                 output_config,
                 &fields.archive_name,
+                &fields.archive_file,
                 client_context,
                 &srum_table.topic,
             )?;

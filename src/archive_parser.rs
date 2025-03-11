@@ -89,7 +89,11 @@ pub fn parse(configuration: Configuration) -> Result<(), Error> {
         archive_service,
     );
 
-    let read_dir = fs::read_dir(&configuration.input_folder)?;
+    let read_dir = fs::read_dir(&configuration.input_folder).map_err(|e| {
+        Error::Generic(format!("Error while reading: '{}' - {e}", {
+            &configuration.input_folder
+        }))
+    })?;
 
     for path in read_dir {
         let path = path?;
@@ -354,8 +358,9 @@ pub fn create_parsing_threads(
     output_configs: &[OutputConfig],
     client_context: &str,
 ) -> Sender<ParseMsg> {
-    let (sender, receiver) = flume::unbounded::<ParseMsg>();
     let num_thread = thread_number_or_default(num_thread);
+    let (sender, receiver) = flume::bounded::<ParseMsg>(num_thread);
+
     for _ in 0..num_thread {
         let receiver = receiver.clone();
         let output_configs = output_configs.to_vec();

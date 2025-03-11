@@ -15,6 +15,25 @@ use crate::{
 };
 
 ///
+/// defines the available parser
+///
+#[derive(Serialize, Deserialize, Clone, Debug)]
+//#[serde(tag = "type")]
+#[allow(non_camel_case_types)]
+pub enum ParserType {
+    csv {
+        mapping_file: String,
+        best_effort: Option<bool>,
+        skip_lines: Option<usize>,
+    },
+    evtx,
+    hive {
+        root_name: String,
+    },
+    srum,
+}
+
+///
 /// Default configuration file that will be created if no file is provided
 ///
 const DEFAULT_FILE_NAME: &str = "configuration.yaml";
@@ -192,25 +211,6 @@ pub enum DataType {
 }
 
 ///
-/// defines the available parser
-///
-#[derive(Serialize, Deserialize, Clone, Debug)]
-//#[serde(tag = "type")]
-#[allow(non_camel_case_types)]
-pub enum ParserType {
-    csv {
-        mapping_file: String,
-        best_effort: Option<bool>,
-        skip_lines: Option<usize>,
-    },
-    evtx,
-    hive {
-        root_name: String,
-    },
-    srum,
-}
-
-///
 /// Associate a parser to a regex that will filter input file names
 ///
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -340,6 +340,19 @@ mod tests {
             },
         };
 
+        let hive_parser = ParserConfig {
+            file_filter: Regex::new("hive.*\\.hive$").unwrap(),
+            parser: ParserType::hive {
+                root_name: "\\HKLM\\SAM".to_owned(),
+            },
+        };
+
+        let evtx_parser = ParserConfig {
+            file_filter: Regex::new(".evtx$").unwrap(),
+            parser: ParserType::evtx,
+        };
+
+        // "\\HKLM\\SAM"
         let file_output = OutputConfig::file {
             folder: "output".to_string(),
         };
@@ -352,7 +365,7 @@ mod tests {
             "100000".to_owned(),
         );
         params.insert("compression.codec".to_owned(), "lz4".to_owned());
-        let kafka_outptut = OutputConfig::kafa { params };
+        let kafka_outptut = OutputConfig::kafka { params };
 
         let clickhouse_output = OutputConfig::clickhouse {
             server: "localhost:8123".to_owned(),
@@ -368,7 +381,7 @@ mod tests {
             parsing_threads: 0,
             decompression_threads: 0,
             input_is_decompressed: false,
-            parsers: vec![srum_parser, csv_parser],
+            parsers: vec![srum_parser, csv_parser, hive_parser, evtx_parser],
             output: vec![file_output, kafka_outptut, clickhouse_output],
         };
 

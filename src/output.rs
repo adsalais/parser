@@ -45,12 +45,13 @@ impl Output {
     pub fn new(
         output_config: &[OutputConfig],
         archive_name: &str,
+        file_name: &str,
         context: &str,
         topic: &str,
     ) -> Result<Self, Error> {
         let mut list = vec![];
         for o in output_config {
-            list.push(o.build(archive_name, context, topic)?);
+            list.push(o.build(archive_name, file_name, context, topic)?);
         }
         Ok(Self { list, num_rows: 0 })
     }
@@ -122,7 +123,7 @@ pub enum OutputConfig {
         login: Option<String>,
         password: Option<String>,
     },
-    kafa {
+    kafka {
         params: HashMap<String, String>,
     },
 }
@@ -130,6 +131,7 @@ impl OutputConfig {
     pub fn build(
         &self,
         archive_name: &str,
+        file_name: &str,
         context: &str,
         topic: &str,
     ) -> Result<Box<dyn OutputWriter>, Error> {
@@ -138,7 +140,6 @@ impl OutputConfig {
                 let mut path: PathBuf = folder.into();
                 path.push(archive_name);
                 fs::create_dir_all(&path)?;
-                let file_name = &full_topic_name(context, topic);
                 path.push(format!("{file_name}.jsonl"));
                 let writer = FileWriter::new(&path)?;
                 Ok(Box::new(writer))
@@ -151,7 +152,7 @@ impl OutputConfig {
                 let writer = ClickhouseWriter::new(server, &login, &password, context, topic)?;
                 Ok(Box::new(writer))
             }
-            OutputConfig::kafa { params } => {
+            OutputConfig::kafka { params } => {
                 let topic_name = &full_topic_name(context, topic);
                 let writer = KafkaWriter::new(topic_name, params)?;
                 Ok(Box::new(writer))
